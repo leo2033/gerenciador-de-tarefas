@@ -81,3 +81,25 @@ button:hover {
     text-align: center;
     width: calc(100% - 40px);
 }
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.logout-button {
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 5px 10px;  /* Reduz o tamanho do botão */
+    font-size: 14px;  /* Diminui o tamanho do texto */
+    border-radius: 5px;
+    cursor: pointer;
+    width: auto;  /* Ajusta automaticamente ao tamanho do texto */
+    height: 30px;  /* Define uma altura menor */
+}
+
+.logout-button:hover {
+    background-color: #c9302c;
+}

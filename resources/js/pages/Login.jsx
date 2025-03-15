@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import "/resources/css/app.css";
-
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
@@ -14,35 +12,33 @@ function Login() {
         setError(null);
 
         try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const res = await fetch("/api/login", { // ✅ Mantendo o proxy do Vite
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify({ email, password }),
             });
 
-            const textResponse = await res.text();
-            console.log("Resposta da API:", textResponse);
-
-            let data;
-            try {
-                data = JSON.parse(textResponse);
-            } catch (error) {
-                throw new Error("A resposta da API não é um JSON válido.");
-            }
+            const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data?.error || 'Erro ao fazer login');
+                throw new Error(data?.error || "Erro ao fazer login");
             }
 
-            if (data.access_token) {
-                localStorage.setItem('token', data.access_token);
+            if (data.access_token && data.user) { // ✅ Garante que recebemos o usuário
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("userId", data.user.id);
                 console.log("Token armazenado:", data.access_token);
-                navigate('/tasks');
+                console.log("ID do usuário armazenado:", data.user.id);
+
+                // ✅ Aguarda um pequeno tempo antes do redirecionamento
+                setTimeout(() => navigate("/tasks"), 100);
             } else {
-                throw new Error("Nenhum token recebido da API.");
+                throw new Error("Nenhum token ou usuário recebido da API.");
             }
         } catch (error) {
-            console.error('Erro ao logar:', error);
+            console.error("Erro ao logar:", error);
             setError(error.message);
         }
     };
@@ -68,7 +64,7 @@ function Login() {
                 />
                 <button type="submit">Entrar</button>
             </form>
-            <p>Não tem uma conta? <button onClick={() => navigate('/register')}>Cadastre-se</button></p>
+            <p>Não tem uma conta? <button onClick={() => navigate("/register")}>Cadastre-se</button></p>
         </div>
     );
 }

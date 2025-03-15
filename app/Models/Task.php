@@ -9,12 +9,19 @@ class Task extends Model
 {
     use HasFactory;
 
-    // Adicione os campos permitidos no $fillable
     protected $fillable = [
         'title',
         'description',
         'priority',
         'due_date',
-        'user_id'  // Certifique-se de incluir o user_id se estiver sendo salvo
+        'user_id'
     ];
+
+    /**
+     * Relacionamento: Uma tarefa pertence a um usuário.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
