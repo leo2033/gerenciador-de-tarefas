@@ -4,6 +4,17 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PasswordResetController;
+
+
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode']);
+Route::post('/verify-code', [PasswordResetController::class, 'verifyCode']);
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode']);
+Route::post('/verify-code', [PasswordResetController::class, 'verifyCode']);
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+
 
 // 🔹 Rotas de autenticação
 Route::post('/register', [AuthController::class, 'register']);

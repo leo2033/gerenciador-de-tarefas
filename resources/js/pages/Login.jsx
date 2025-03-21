@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Login() {
+function Login({ setToken }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
@@ -12,33 +12,25 @@ function Login() {
         setError(null);
 
         try {
-            const res = await fetch("/api/login", { // ✅ Mantendo o proxy do Vite
+            const res = await fetch("/api/login", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
 
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data?.error || "Erro ao fazer login");
+                throw new Error(data?.message || "Erro ao fazer login");
             }
 
-            if (data.access_token && data.user) { // ✅ Garante que recebemos o usuário
-                localStorage.setItem("token", data.access_token);
-                localStorage.setItem("userId", data.user.id);
-                console.log("Token armazenado:", data.access_token);
-                console.log("ID do usuário armazenado:", data.user.id);
+            localStorage.setItem("token", data.access_token);
+            localStorage.setItem("user_id", data.user.id);
+            localStorage.setItem("role", data.user.role);
+            setToken(data.access_token); // Notifica o App.jsx da mudança de token
 
-                // ✅ Aguarda um pequeno tempo antes do redirecionamento
-                setTimeout(() => navigate("/tasks"), 100);
-            } else {
-                throw new Error("Nenhum token ou usuário recebido da API.");
-            }
+            navigate("/tasks");
         } catch (error) {
-            console.error("Erro ao logar:", error);
             setError(error.message);
         }
     };
@@ -64,7 +56,16 @@ function Login() {
                 />
                 <button type="submit">Entrar</button>
             </form>
-            <p>Não tem uma conta? <button onClick={() => navigate("/register")}>Cadastre-se</button></p>
+
+            <p>
+                Esqueceu sua senha?{" "}
+                <button onClick={() => navigate("/forgot-password")}>Recuperar Senha</button>
+            </p>
+
+            <p>
+                Não tem uma conta?{" "}
+                <button onClick={() => navigate("/register")}>Cadastre-se</button>
+            </p>
         </div>
     );
 }
