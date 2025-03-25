@@ -14,7 +14,11 @@ class Task extends Model
         'description',
         'priority',
         'due_date',
-        'user_id'
+        'user_id',
+        'status',
+        'completion_request',
+        'completion_comment',
+        'admin_comment',
     ];
 
     /**

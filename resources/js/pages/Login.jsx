@@ -10,31 +10,42 @@ function Login({ setToken }) {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError(null);
-
+    
         try {
             const res = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data?.message || "Erro ao fazer login");
+    
+            const contentType = res.headers.get("content-type");
+    
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Resposta inesperada do servidor.");
             }
-
+    
+            const data = await res.json();
+    
+            if (!res.ok) {
+                const errorMessage =
+                    data?.errors?.email?.[0] || // Erro de validação vindo do Laravel
+                    data?.error ||              // Erro manual retornado no controlador
+                    "E-mail ou senha inválidos."; // Fallback
+                throw new Error(errorMessage);
+            }
+    
+            // Sucesso
             localStorage.setItem("token", data.access_token);
             localStorage.setItem("user_id", data.user.id);
             localStorage.setItem("role", data.user.role);
-            setToken(data.access_token); // Notifica o App.jsx da mudança de token
-
+            setToken(data.access_token);
             navigate("/tasks");
         } catch (error) {
-            setError(error.message);
+            setError(error.message || "Erro ao fazer login.");
         }
     };
-
+    
+    
     return (
         <div className="container">
             <h2>Login</h2>

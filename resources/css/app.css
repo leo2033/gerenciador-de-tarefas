@@ -18,12 +18,13 @@ body {
 
 input, select, button {
     display: block;
-    width: calc(100% - 20px);
+    width: calc(100% - 20px); /* Largura consistente para todos os elementos */
     margin: 10px auto;
     padding: 10px;
     font-size: 16px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    box-sizing: border-box; /* Garante que o padding não afete a largura total */
 }
 
 button {
@@ -79,8 +80,9 @@ button:hover {
 
 .date-input {
     text-align: center;
-    width: calc(100% - 40px);
+    width: calc(100% - 20px); /* Ajustado para ter a mesma largura dos outros inputs */
 }
+
 .header {
     display: flex;
     justify-content: space-between;
@@ -102,4 +104,27 @@ button:hover {
 
 .logout-button:hover {
     background-color: #c9302c;
+}
+
+.highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 6px;
+    margin: 5px 0;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+textarea {
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.modal select {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    font-size: 14px;
 }

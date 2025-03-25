@@ -2,47 +2,59 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AdminTaskActionMail;
+use App\Mail\TaskCompletionReviewedMail;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\AdminTaskActionMail;
 
 class TaskController extends Controller
 {
+    /**
+     * Verifica se a data é um feriado nacional via BrasilAPI
+     */
+    private function isHoliday(string $date): bool
+    {
+        $year = date('Y', strtotime($date));
+        $response = Http::get("https://brasilapi.com.br/api/feriados/v1/{$year}");
+
+        if ($response->failed()) return false;
+
+        return collect($response->json())->contains('date', $date);
+    }
+
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = Task::query();
+
+        $query = Task::with('user');
 
         if ($user->role !== 'admin') {
             $query->where('user_id', $user->id);
         }
 
-        if ($user->role === 'admin' && $request->has('user_id')) {
+        if ($user->role === 'admin' && $request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        if ($request->has('priority') && !empty($request->priority)) {
+        if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
         }
 
-        if ($request->has('search') && !empty($request->search)) {
-            $search = strtolower($request->search);
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(title) LIKE ?', ["%$search%"])
-                  ->orWhereRaw('LOWER(description) LIKE ?', ["%$search%"]);
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', "%{$request->search}%")
+                  ->orWhere('description', 'like', "%{$request->search}%");
             });
         }
 
-        if ($request->has('due_date') && !empty($request->due_date)) {
+        if ($request->filled('due_date')) {
             $query->whereDate('due_date', $request->due_date);
         }
 
-        Log::info('📌 Parâmetros de busca:', $request->all());
-
-        return response()->json($query->with('user')->get());
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -55,10 +67,12 @@ class TaskController extends Controller
             'user_id' => 'nullable|exists:users,id',
         ]);
 
+        if ($this->isHoliday($request->due_date)) {
+            return response()->json(['error' => 'Não é possível criar tarefas em feriados.'], 422);
+        }
+
         $authUser = auth()->user();
-        $userId = $authUser->role === 'admin' && $request->has('user_id')
-            ? $request->user_id
-            : $authUser->id;
+        $userId = $authUser->role === 'admin' && $request->filled('user_id') ? $request->user_id : $authUser->id;
 
         $task = Task::create([
             'title' => $request->title,
@@ -100,10 +114,14 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'priority' => 'sometimes|required|in:low,medium,high',
             'due_date' => 'sometimes|required|date|after_or_equal:today',
-            'user_id' => 'nullable|exists:users,id'
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
-        if ($authUser->role === 'admin' && $request->has('user_id')) {
+        if ($request->filled('due_date') && $this->isHoliday($request->due_date)) {
+            return response()->json(['error' => 'Não é possível agendar tarefas para um feriado.'], 422);
+        }
+
+        if ($authUser->role === 'admin' && $request->filled('user_id')) {
             $task->user_id = $request->user_id;
         }
 
@@ -125,8 +143,8 @@ class TaskController extends Controller
             return response()->json(['error' => 'Você não tem permissão para excluir esta tarefa'], 403);
         }
 
-        $owner = $task->user;
         $clone = clone $task;
+        $owner = $task->user;
 
         $task->delete();
 
@@ -139,9 +157,7 @@ class TaskController extends Controller
 
     public function tasksByUser($user_id, Request $request)
     {
-        $authUser = auth()->user();
-
-        if ($authUser->role !== 'admin') {
+        if (auth()->user()->role !== 'admin') {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
@@ -151,24 +167,103 @@ class TaskController extends Controller
 
         $query = Task::where('user_id', $user_id);
 
-        if ($request->has('priority') && !empty($request->priority)) {
+        if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
         }
 
-        if ($request->has('search') && !empty($request->search)) {
-            $search = strtolower($request->search);
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(title) LIKE ?', ["%$search%"])
-                  ->orWhereRaw('LOWER(description) LIKE ?', ["%$search%"]);
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', "%{$request->search}%")
+                  ->orWhere('description', 'like', "%{$request->search}%");
             });
         }
 
-        if ($request->has('due_date') && !empty($request->due_date)) {
+        if ($request->filled('due_date')) {
             $query->whereDate('due_date', $request->due_date);
         }
 
-        Log::info("🔍 Buscando tarefas do usuário $user_id com filtros: ", $request->all());
-
         return response()->json($query->get());
     }
+
+    public function requestCompletion(Request $request, $id)
+    {
+        $task = Task::findOrFail($id);
+
+        if ($task->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Você não pode solicitar conclusão desta tarefa'], 403);
+        }
+
+        $request->validate([
+            'completion_comment' => 'required|string|min:3',
+        ]);
+
+        $task->update([
+            'completion_request' => true,
+            'completion_comment' => $request->completion_comment,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Solicitação de conclusão enviada com sucesso.']);
+    }
+
+    // No TaskController, adicione logging mais detalhado
+public function reviewCompletion(Request $request, $id)
+{
+    \Log::info('Revisão de conclusão iniciada', [
+        'task_id' => $id,
+        'status' => $request->status
+    ]);
+
+    try {
+        $task = Task::findOrFail($id);
+        $admin = auth()->user();
+    
+        if ($admin->role !== 'admin') {
+            return response()->json(['error' => 'Apenas administradores podem revisar conclusões.'], 403);
+        }
+    
+        $request->validate([
+            'status' => 'required|in:concluida,pendente',
+            'admin_comment' => 'nullable|string',
+        ]);
+    
+        $task->update([
+            'status' => $request->status,
+            'completion_request' => false,
+            'admin_comment' => $request->status === 'pendente' ? $request->admin_comment : null,
+        ]);
+    
+        // Debug completo antes de enviar e-mail
+        \Log::info('Preparando envio de e-mail', [
+            'task_id' => $task->id,
+            'user_email' => $task->user->email,
+            'user_name' => $task->user->name
+        ]);
+
+        try {
+            Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
+            \Log::info('E-mail enviado com sucesso');
+        } catch (\Exception $e) {
+            \Log::error('Erro no envio de e-mail', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    
+        return response()->json([
+            'success' => true, 
+            'message' => 'Revisão de conclusão realizada.', 
+            'task' => $task
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro na revisão de conclusão', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'error' => 'Erro interno do servidor', 
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
 }
