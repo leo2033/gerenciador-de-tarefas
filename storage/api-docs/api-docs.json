@@ -1,0 +1,326 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Gerenciador de Tarefas - API",
+        "description": "Documentação da API para gerenciamento de tarefas.",
+        "contact": {
+            "name": "Seu Nome",
+            "email": "seuemail@dominio.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://my-default-host.com",
+            "description": "Servidor da API"
+        }
+    ],
+    "paths": {
+        "/api/tasks": {
+            "get": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "summary": "Listar tarefas",
+                "operationId": "471d938a3bfaeb6fbd981d7c3e2728b0",
+                "parameters": [
+                    {
+                        "name": "priority",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "due_date",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de tarefas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "summary": "Criar tarefa",
+                "operationId": "f803ebdb2300acdb7e93bbe8d0b9a2e8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "priority",
+                                    "due_date"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "priority": {
+                                        "type": "string"
+                                    },
+                                    "due_date": {
+                                        "type": "string"
+                                    },
+                                    "user_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tarefa criada"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/{id}": {
+            "get": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "90b3cd4d2d4b416dc989d2055dbed06c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tarefa encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "1aaf37e74360ef4c10fadaee02ae77fb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "priority": {
+                                        "type": "string"
+                                    },
+                                    "due_date": {
+                                        "type": "string"
+                                    },
+                                    "user_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "ad582480cd57c2a4e3b6a426943eeca5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluído"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/user/{user_id}": {
+            "get": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "85859aa36bf450a2d641a1120b22cd1f",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista por usuário"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/{id}/request-completion": {
+            "post": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "52f0bfd86ff1b81060b6b176116becfb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "completion_comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Solicitação enviada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/{id}/review-completion": {
+            "post": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "operationId": "d73d9b4da0caceb173030af54bd91abb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string"
+                                    },
+                                    "admin_comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Revisão concluída"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Tarefas",
+            "description": "Gerenciamento de tarefas para usuários e administradores"
+        }
+    ]
+}

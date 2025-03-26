@@ -10,11 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
+/**
+ * @OA\Tag(
+ *     name="Tarefas",
+ *     description="Gerenciamento de tarefas para usuários e administradores"
+ * )
+ */
 class TaskController extends Controller
 {
-    /**
-     * Verifica se a data é um feriado nacional via BrasilAPI
-     */
     private function isHoliday(string $date): bool
     {
         $year = date('Y', strtotime($date));
@@ -25,17 +28,26 @@ class TaskController extends Controller
         return collect($response->json())->contains('date', $date);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/tasks",
+     *     summary="Listar tarefas",
+     *     tags={"Tarefas"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="priority", in="query", required=false),
+     *     @OA\Parameter(name="search", in="query", required=false),
+     *     @OA\Parameter(name="due_date", in="query", required=false),
+     *     @OA\Response(response=200, description="Lista de tarefas")
+     * )
+     */
     public function index(Request $request)
     {
         $user = auth()->user();
-
         $query = Task::with('user');
 
         if ($user->role !== 'admin') {
             $query->where('user_id', $user->id);
-        }
-
-        if ($user->role === 'admin' && $request->filled('user_id')) {
+        } elseif ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
@@ -57,6 +69,27 @@ class TaskController extends Controller
         return response()->json($query->get());
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/tasks",
+     *     summary="Criar tarefa",
+     *     tags={"Tarefas"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title","priority","due_date"},
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="priority", type="string"),
+     *             @OA\Property(property="due_date", type="string"),
+     *             @OA\Property(property="user_id", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tarefa criada"),
+     *     @OA\Response(response=422, description="Erro de validação")
+     * )
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -89,6 +122,7 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'task' => $task], 201);
     }
 
+    /** @OA\Get(path="/api/tasks/{id}", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="id", in="path", required=true), @OA\Response(response=200, description="Tarefa encontrada")) */
     public function show($id)
     {
         $task = Task::with('user')->findOrFail($id);
@@ -100,6 +134,7 @@ class TaskController extends Controller
         return response()->json($task);
     }
 
+    /** @OA\Put(path="/api/tasks/{id}", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="id", in="path", required=true), @OA\RequestBody(@OA\JsonContent(@OA\Property(property="title", type="string"), @OA\Property(property="description", type="string"), @OA\Property(property="priority", type="string"), @OA\Property(property="due_date", type="string"), @OA\Property(property="user_id", type="integer"))), @OA\Response(response=200, description="Atualizado")) */
     public function update(Request $request, $id)
     {
         $task = Task::findOrFail($id);
@@ -134,6 +169,7 @@ class TaskController extends Controller
         return response()->json($task);
     }
 
+    /** @OA\Delete(path="/api/tasks/{id}", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="id", in="path", required=true), @OA\Response(response=200, description="Excluído")) */
     public function destroy($id)
     {
         $task = Task::findOrFail($id);
@@ -155,6 +191,7 @@ class TaskController extends Controller
         return response()->json(['message' => 'Tarefa excluída com sucesso']);
     }
 
+    /** @OA\Get(path="/api/tasks/user/{user_id}", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="user_id", in="path", required=true), @OA\Response(response=200, description="Lista por usuário")) */
     public function tasksByUser($user_id, Request $request)
     {
         if (auth()->user()->role !== 'admin') {
@@ -185,6 +222,7 @@ class TaskController extends Controller
         return response()->json($query->get());
     }
 
+    /** @OA\Post(path="/api/tasks/{id}/request-completion", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="id", in="path", required=true), @OA\RequestBody(@OA\JsonContent(@OA\Property(property="completion_comment", type="string"))), @OA\Response(response=200, description="Solicitação enviada")) */
     public function requestCompletion(Request $request, $id)
     {
         $task = Task::findOrFail($id);
@@ -205,65 +243,33 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'message' => 'Solicitação de conclusão enviada com sucesso.']);
     }
 
-    // No TaskController, adicione logging mais detalhado
-public function reviewCompletion(Request $request, $id)
-{
-    \Log::info('Revisão de conclusão iniciada', [
-        'task_id' => $id,
-        'status' => $request->status
-    ]);
-
-    try {
+    /** @OA\Post(path="/api/tasks/{id}/review-completion", tags={"Tarefas"}, security={{"bearerAuth":{}}}, @OA\Parameter(name="id", in="path", required=true), @OA\RequestBody(@OA\JsonContent(@OA\Property(property="status", type="string"), @OA\Property(property="admin_comment", type="string"))), @OA\Response(response=200, description="Revisão concluída")) */
+    public function reviewCompletion(Request $request, $id)
+    {
         $task = Task::findOrFail($id);
         $admin = auth()->user();
-    
+
         if ($admin->role !== 'admin') {
             return response()->json(['error' => 'Apenas administradores podem revisar conclusões.'], 403);
         }
-    
+
         $request->validate([
             'status' => 'required|in:concluida,pendente',
             'admin_comment' => 'nullable|string',
         ]);
-    
+
         $task->update([
             'status' => $request->status,
             'completion_request' => false,
             'admin_comment' => $request->status === 'pendente' ? $request->admin_comment : null,
         ]);
-    
-        // Debug completo antes de enviar e-mail
-        \Log::info('Preparando envio de e-mail', [
-            'task_id' => $task->id,
-            'user_email' => $task->user->email,
-            'user_name' => $task->user->name
-        ]);
 
-        try {
-            Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
-            \Log::info('E-mail enviado com sucesso');
-        } catch (\Exception $e) {
-            \Log::error('Erro no envio de e-mail', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    
+        Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
+
         return response()->json([
-            'success' => true, 
-            'message' => 'Revisão de conclusão realizada.', 
+            'success' => true,
+            'message' => 'Revisão de conclusão realizada.',
             'task' => $task
         ]);
-    } catch (\Exception $e) {
-        \Log::error('Erro na revisão de conclusão', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'error' => 'Erro interno do servidor', 
-            'message' => $e->getMessage()
-        ], 500);
     }
-}
 }

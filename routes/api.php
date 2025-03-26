@@ -8,42 +8,40 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\HolidayController;
 
 Route::get('/holidays', [HolidayController::class, 'getHolidays']);
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode']);
-Route::post('/verify-code', [PasswordResetController::class, 'verifyCode']);
-Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode']);
-Route::post('/verify-code', [PasswordResetController::class, 'verifyCode']);
-Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+// 🔹 Rotas públicas com limitação de requisições
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode']);
+    Route::post('/verify-code', [PasswordResetController::class, 'verifyCode']);
+    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+});
 
-
-// 🔹 Rotas de autenticação
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-// 🔹 Grupo de rotas protegidas por autenticação JWT
-Route::middleware(['auth:api'])->group(function () {
+// 🔹 Grupo de rotas protegidas por autenticação JWT com rate limit
+Route::middleware(['auth:api', 'throttle:60,1'])->group(function () {
     Route::post('/tasks/{id}/request-completion', [TaskController::class, 'requestCompletion']);
     Route::post('/tasks/{id}/review-completion', [TaskController::class, 'reviewCompletion'])->middleware('role:admin');
+
     // ✅ 🔹 Rota para obter informações do usuário logado
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // ✅ 🔹 Rotas de tarefas (usuários comuns só podem acessar suas próprias tarefas)
     Route::prefix('/tasks')->group(function () {
-        Route::get('/', [TaskController::class, 'index']);   // Lista as tarefas do usuário logado
-        Route::post('/', [TaskController::class, 'store']);  // Criar nova tarefa
-        Route::get('/{id}', [TaskController::class, 'show']); // Ver uma tarefa específica
-        Route::put('/{id}', [TaskController::class, 'update']); // Editar uma tarefa
-        Route::delete('/{id}', [TaskController::class, 'destroy']); // Excluir tarefa
+        Route::get('/', [TaskController::class, 'index']);
+        Route::post('/', [TaskController::class, 'store']);
+        Route::get('/{id}', [TaskController::class, 'show']);
+        Route::put('/{id}', [TaskController::class, 'update']);
+        Route::delete('/{id}', [TaskController::class, 'destroy']);
     });
 
     // ✅ 🔹 Rotas para Administradores (acesso a todas as tarefas)
     Route::middleware(['role:admin'])->group(function () {
-        Route::get('/tasks/user/{user_id}', [TaskController::class, 'tasksByUser']); // Tarefas por usuário
-        Route::get('/users', [UserController::class, 'index']); // Listar todos os usuários
-        Route::get('/users/{id}', [UserController::class, 'show']); // Ver detalhes de um usuário
-        Route::put('/users/{id}', [UserController::class, 'update']); // Atualizar usuário
-        Route::delete('/users/{id}', [UserController::class, 'destroy']); // Deletar usuário
+        Route::get('/tasks/user/{user_id}', [TaskController::class, 'tasksByUser']);
+        Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/{id}', [UserController::class, 'show']);
+        Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
     });
 });
