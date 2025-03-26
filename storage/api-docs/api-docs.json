@@ -27,16 +27,25 @@
                     {
                         "name": "priority",
                         "in": "query",
+                        "description": "Filtrar por prioridade",
                         "required": false
                     },
                     {
                         "name": "search",
                         "in": "query",
+                        "description": "Buscar por título ou descrição",
                         "required": false
                     },
                     {
                         "name": "due_date",
                         "in": "query",
+                        "description": "Filtrar por data de vencimento",
+                        "required": false
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filtrar por ID do usuário (apenas admin)",
                         "required": false
                     }
                 ],
@@ -109,17 +118,22 @@
                 "tags": [
                     "Tarefas"
                 ],
+                "summary": "Exibir tarefa",
                 "operationId": "90b3cd4d2d4b416dc989d2055dbed06c",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Tarefa encontrada"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -132,11 +146,13 @@
                 "tags": [
                     "Tarefas"
                 ],
+                "summary": "Atualizar tarefa",
                 "operationId": "1aaf37e74360ef4c10fadaee02ae77fb",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
@@ -168,7 +184,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Atualizado"
+                        "description": "Tarefa atualizada"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -181,123 +200,22 @@
                 "tags": [
                     "Tarefas"
                 ],
+                "summary": "Excluir tarefa",
                 "operationId": "ad582480cd57c2a4e3b6a426943eeca5",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Excluído"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/tasks/user/{user_id}": {
-            "get": {
-                "tags": [
-                    "Tarefas"
-                ],
-                "operationId": "85859aa36bf450a2d641a1120b22cd1f",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Lista por usuário"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/tasks/{id}/request-completion": {
-            "post": {
-                "tags": [
-                    "Tarefas"
-                ],
-                "operationId": "52f0bfd86ff1b81060b6b176116becfb",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "completion_comment": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Solicitação enviada"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/tasks/{id}/review-completion": {
-            "post": {
-                "tags": [
-                    "Tarefas"
-                ],
-                "operationId": "d73d9b4da0caceb173030af54bd91abb",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "admin_comment": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Revisão concluída"
+                        "description": "Tarefa excluída"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [

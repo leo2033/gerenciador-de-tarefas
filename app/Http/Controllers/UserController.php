@@ -12,14 +12,14 @@ class UserController extends Controller
      */
     public function index()
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'Acesso negado. Apenas administradores podem listar usuários.'], 403);
         }
 
-        // Retorna somente ID e nome para evitar exposição desnecessária de dados
-        return response()->json(User::select('id', 'name')->get());
+        return response()->json(User::query()->select('id', 'name')->get());
     }
 
     /**
@@ -27,13 +27,14 @@ class UserController extends Controller
      */
     public function show($id)
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'Acesso negado. Apenas administradores podem visualizar detalhes de usuários.'], 403);
         }
 
-        $userData = User::find($id);
+        $userData = User::query()->find($id);
 
         if (!$userData) {
             return response()->json(['error' => 'Usuário não encontrado.'], 404);
@@ -47,13 +48,14 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'Acesso negado. Apenas administradores podem editar usuários.'], 403);
         }
 
-        $userData = User::find($id);
+        $userData = User::query()->find($id);
 
         if (!$userData) {
             return response()->json(['error' => 'Usuário não encontrado.'], 404);
@@ -65,7 +67,7 @@ class UserController extends Controller
             'role' => 'sometimes|required|in:user,admin',
         ]);
 
-        $userData->update($request->all());
+        $userData->update($request->only(['name', 'email', 'role']));
 
         return response()->json(['message' => 'Usuário atualizado com sucesso.', 'user' => $userData]);
     }
@@ -75,13 +77,14 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'Acesso negado. Apenas administradores podem excluir usuários.'], 403);
         }
 
-        $userData = User::find($id);
+        $userData = User::query()->find($id);
 
         if (!$userData) {
             return response()->json(['error' => 'Usuário não encontrado.'], 404);

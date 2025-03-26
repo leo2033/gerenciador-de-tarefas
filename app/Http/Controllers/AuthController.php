@@ -21,24 +21,24 @@ class AuthController extends Controller
             'password' => [
                 'required',
                 'string',
-                'min:8', // Pelo menos 8 caracteres
-                'regex:/[A-Z]/', // Pelo menos uma letra maiúscula
-                'regex:/[a-z]/', // Pelo menos uma letra minúscula
-                'regex:/[0-9]/', // Pelo menos um número
-                'regex:/[@$!%*?&]/', // Pelo menos um caractere especial
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*?&]/',
             ],
-            'role' => 'required|string|in:user,admin', // Permite "user" ou "admin"
+            'role' => 'required|string|in:user,admin',
         ], [
             'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
             'password.regex' => 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial (@$!%*?&).',
             'email.unique' => 'Este e-mail já está cadastrado. Use outro ou faça login.',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
+        $user = User::query()->create([
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+            'role' => $request->input('role'),
         ]);
 
         $token = JWTAuth::fromUser($user);
@@ -63,18 +63,20 @@ class AuthController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (!$token = JWTAuth::attempt($credentials)) {
+        if (!$token = auth('api')->attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['Credenciais inválidas.'],
             ]);
         }
 
+        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60,
+           'expires_in' => config('jwt.ttl') * 60,
+
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -97,7 +99,7 @@ class AuthController extends Controller
      */
     public function logout()
     {
-        JWTAuth::invalidate(JWTAuth::getToken());
+        auth('api')->logout();
         return response()->json(['message' => 'Logout realizado com sucesso.']);
     }
 }

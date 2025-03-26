@@ -22,15 +22,16 @@ class PasswordResetController extends Controller
             'email' => 'required|email|exists:users,email'
         ]);
 
+        $email = $request->input('email');
         $code = random_int(100000, 999999);
 
         DB::table('password_resets')->updateOrInsert(
-            ['email' => $request->email],
+            ['email' => $email],
             ['token' => $code, 'created_at' => now()]
         );
 
-        Mail::raw("Seu código de recuperação de senha é: $code", function ($message) use ($request) {
-            $message->to($request->email)
+        Mail::raw("Seu código de recuperação de senha é: $code", function ($message) use ($email) {
+            $message->to($email)
                     ->subject('Código de Recuperação de Senha');
         });
 
@@ -47,11 +48,14 @@ class PasswordResetController extends Controller
             'code' => 'required|integer'
         ]);
 
+        $email = $request->input('email');
+        $code = $request->input('code');
+
         $record = DB::table('password_resets')
-                    ->where('email', $request->email)
+                    ->where('email', $email)
                     ->first();
 
-        if (!$record || $record->token != $request->code) {
+        if (!$record || $record->token != $code) {
             return response()->json(['error' => 'Código inválido.'], 422);
         }
 
@@ -78,20 +82,24 @@ class PasswordResetController extends Controller
             ],
         ]);
 
+        $email = $request->input('email');
+        $code = $request->input('code');
+        $newPassword = $request->input('password');
+
         $record = DB::table('password_resets')
-                    ->where('email', $request->email)
-                    ->where('token', $request->code)
+                    ->where('email', $email)
+                    ->where('token', $code)
                     ->first();
 
         if (!$record) {
             return response()->json(['error' => 'Código inválido.'], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
-        $user->password = Hash::make($request->password);
+        $user = User::query()->where('email', $email)->first();
+        $user->password = Hash::make($newPassword);
         $user->save();
 
-        DB::table('password_resets')->where('email', $request->email)->delete();
+        DB::table('password_resets')->where('email', $email)->delete();
 
         return response()->json(['message' => 'Senha redefinida com sucesso.']);
     }
