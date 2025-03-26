@@ -68,6 +68,9 @@ function Relatorio() {
 
   const data = getStatusCounts();
 
+  // Calculate the total number of tasks
+  const totalTasks = data.reduce((sum, entry) => sum + entry.total, 0);
+
   // Define colors for each status
   const COLORS = {
     "A Fazer": "#34D399", // Green
@@ -99,6 +102,13 @@ function Relatorio() {
             <option key={user.id} value={user.id}>{user.name}</option>
           ))}
         </select>
+      </div>
+
+      {/* Display the total number of tasks */}
+      <div className="mb-4">
+        <p className="text-lg font-semibold">
+          Total de Tarefas: {totalTasks}
+        </p>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
