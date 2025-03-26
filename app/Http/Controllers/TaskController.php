@@ -34,10 +34,9 @@ class TaskController extends Controller
      *     summary="Listar tarefas",
      *     tags={"Tarefas"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="priority", in="query", required=false, description="Filtrar por prioridade"),
-     *     @OA\Parameter(name="search", in="query", required=false, description="Buscar por título ou descrição"),
-     *     @OA\Parameter(name="due_date", in="query", required=false, description="Filtrar por data de vencimento"),
-     *     @OA\Parameter(name="user_id", in="query", required=false, description="Filtrar por ID do usuário (apenas admin)"),
+     *     @OA\Parameter(name="priority", in="query", required=false),
+     *     @OA\Parameter(name="search", in="query", required=false),
+     *     @OA\Parameter(name="due_date", in="query", required=false),
      *     @OA\Response(response=200, description="Lista de tarefas")
      * )
      */
@@ -49,23 +48,22 @@ class TaskController extends Controller
         if ($user->role !== 'admin') {
             $query->where('user_id', $user->id);
         } elseif ($request->filled('user_id')) {
-            $query->where('user_id', $request->input('user_id'));
+            $query->where('user_id', $request->user_id);
         }
 
         if ($request->filled('priority')) {
-            $query->where('priority', $request->input('priority'));
+            $query->where('priority', $request->priority);
         }
 
         if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', "%{$request->search}%")
+                  ->orWhere('description', 'like', "%{$request->search}%");
             });
         }
 
         if ($request->filled('due_date')) {
-            $query->whereDate('due_date', $request->input('due_date'));
+            $query->whereDate('due_date', $request->due_date);
         }
 
         return response()->json($query->get());
@@ -88,13 +86,12 @@ class TaskController extends Controller
      *             @OA\Property(property="user_id", type="integer")
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Tarefa criada"),
-     *     @OA\Response(response=422, description="Erro de validação")
+     *     @OA\Response(response=201, description="Tarefa criada")
      * )
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high',
@@ -102,16 +99,22 @@ class TaskController extends Controller
             'user_id' => 'nullable|exists:users,id',
         ]);
 
-        if ($this->isHoliday($validated['due_date'])) {
+        if ($this->isHoliday($request->due_date)) {
             return response()->json(['error' => 'Não é possível criar tarefas em feriados.'], 422);
         }
 
         $authUser = auth()->user();
-        $userId = $authUser->role === 'admin' && isset($validated['user_id'])
-            ? $validated['user_id']
-            : $authUser->id;
+        $userId = $authUser->role === 'admin' && $request->filled('user_id') ? $request->user_id : $authUser->id;
 
-        $task = Task::create(array_merge($validated, ['user_id' => $userId]));
+        $task = Task::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'priority' => $request->priority,
+            'due_date' => $request->due_date,
+            'user_id' => $userId,
+        ]);
+
+        $task->load('user');
 
         if ($authUser->role === 'admin' && $userId !== $authUser->id) {
             Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'create', $authUser->name));
@@ -123,12 +126,11 @@ class TaskController extends Controller
     /**
      * @OA\Get(
      *     path="/api/tasks/{id}",
-     *     summary="Exibir tarefa",
+     *     summary="Detalhes da tarefa",
      *     tags={"Tarefas"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, description="ID da tarefa"),
-     *     @OA\Response(response=200, description="Tarefa encontrada"),
-     *     @OA\Response(response=403, description="Acesso negado")
+     *     @OA\Parameter(name="id", in="path", required=true),
+     *     @OA\Response(response=200, description="Detalhes da tarefa")
      * )
      */
     public function show($id)
@@ -148,16 +150,17 @@ class TaskController extends Controller
      *     summary="Atualizar tarefa",
      *     tags={"Tarefas"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, description="ID da tarefa"),
-     *     @OA\RequestBody(@OA\JsonContent(
-     *         @OA\Property(property="title", type="string"),
-     *         @OA\Property(property="description", type="string"),
-     *         @OA\Property(property="priority", type="string"),
-     *         @OA\Property(property="due_date", type="string"),
-     *         @OA\Property(property="user_id", type="integer")
-     *     )),
-     *     @OA\Response(response=200, description="Tarefa atualizada"),
-     *     @OA\Response(response=403, description="Acesso negado")
+     *     @OA\Parameter(name="id", in="path", required=true),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="priority", type="string"),
+     *             @OA\Property(property="due_date", type="string"),
+     *             @OA\Property(property="user_id", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Tarefa atualizada")
      * )
      */
     public function update(Request $request, $id)
@@ -169,7 +172,7 @@ class TaskController extends Controller
             return response()->json(['error' => 'Você não tem permissão para editar esta tarefa'], 403);
         }
 
-        $validated = $request->validate([
+        $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'sometimes|required|in:low,medium,high',
@@ -177,15 +180,16 @@ class TaskController extends Controller
             'user_id' => 'nullable|exists:users,id',
         ]);
 
-        if (isset($validated['due_date']) && $this->isHoliday($validated['due_date'])) {
+        if ($request->filled('due_date') && $this->isHoliday($request->due_date)) {
             return response()->json(['error' => 'Não é possível agendar tarefas para um feriado.'], 422);
         }
 
-        if ($authUser->role === 'admin' && isset($validated['user_id'])) {
-            $task->user_id = $validated['user_id'];
+        if ($authUser->role === 'admin' && $request->filled('user_id')) {
+            $task->user_id = $request->user_id;
         }
 
-        $task->update($validated);
+        $task->update($request->only(['title', 'description', 'priority', 'due_date']));
+        $task->load('user');
 
         if ($authUser->role === 'admin' && $task->user_id !== $authUser->id) {
             Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'update', $authUser->name));
@@ -200,9 +204,8 @@ class TaskController extends Controller
      *     summary="Excluir tarefa",
      *     tags={"Tarefas"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, description="ID da tarefa"),
-     *     @OA\Response(response=200, description="Tarefa excluída"),
-     *     @OA\Response(response=403, description="Acesso negado")
+     *     @OA\Parameter(name="id", in="path", required=true),
+     *     @OA\Response(response=200, description="Tarefa excluída")
      * )
      */
     public function destroy($id)
@@ -214,15 +217,91 @@ class TaskController extends Controller
             return response()->json(['error' => 'Você não tem permissão para excluir esta tarefa'], 403);
         }
 
+        $task->load('user');
         $clone = clone $task;
-        $owner = $task->user;
 
         $task->delete();
 
-        if ($authUser->role === 'admin' && $owner->id !== $authUser->id) {
-            Mail::to($owner->email)->send(new AdminTaskActionMail($clone, 'delete', $authUser->name));
+        if ($authUser->role === 'admin' && $clone->user->id !== $authUser->id) {
+            Mail::to($clone->user->email)->send(new AdminTaskActionMail($clone, 'delete', $authUser->name));
         }
 
         return response()->json(['message' => 'Tarefa excluída com sucesso']);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/tasks/{id}/request-completion",
+     *     summary="Solicitar conclusão de tarefa",
+     *     tags={"Tarefas"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true),
+     *     @OA\RequestBody(@OA\JsonContent(@OA\Property(property="completion_comment", type="string"))),
+     *     @OA\Response(response=200, description="Solicitação enviada")
+     * )
+     */
+    public function requestCompletion(Request $request, $id)
+    {
+        $task = Task::findOrFail($id);
+
+        if ($task->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Você não pode solicitar conclusão desta tarefa'], 403);
+        }
+
+        $request->validate([
+            'completion_comment' => 'required|string|min:3',
+        ]);
+
+        $task->update([
+            'completion_request' => true,
+            'completion_comment' => $request->completion_comment,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Solicitação de conclusão enviada com sucesso.']);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/tasks/{id}/review-completion",
+     *     summary="Revisar solicitação de conclusão",
+     *     tags={"Tarefas"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true),
+     *     @OA\RequestBody(@OA\JsonContent(
+     *         @OA\Property(property="status", type="string"),
+     *         @OA\Property(property="admin_comment", type="string")
+     *     )),
+     *     @OA\Response(response=200, description="Conclusão revisada")
+     * )
+     */
+    public function reviewCompletion(Request $request, $id)
+    {
+        $task = Task::findOrFail($id);
+        $admin = auth()->user();
+
+        if ($admin->role !== 'admin') {
+            return response()->json(['error' => 'Apenas administradores podem revisar conclusões.'], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:concluida,pendente',
+            'admin_comment' => 'nullable|string',
+        ]);
+
+        $task->update([
+            'status' => $request->status,
+            'completion_request' => false,
+            'admin_comment' => $request->status === 'pendente' ? $request->admin_comment : null,
+        ]);
+
+        $task->load('user');
+
+        Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Revisão de conclusão realizada.',
+            'task' => $task
+        ]);
     }
 }

@@ -27,25 +27,16 @@
                     {
                         "name": "priority",
                         "in": "query",
-                        "description": "Filtrar por prioridade",
                         "required": false
                     },
                     {
                         "name": "search",
                         "in": "query",
-                        "description": "Buscar por título ou descrição",
                         "required": false
                     },
                     {
                         "name": "due_date",
                         "in": "query",
-                        "description": "Filtrar por data de vencimento",
-                        "required": false
-                    },
-                    {
-                        "name": "user_id",
-                        "in": "query",
-                        "description": "Filtrar por ID do usuário (apenas admin)",
                         "required": false
                     }
                 ],
@@ -101,9 +92,6 @@
                 "responses": {
                     "201": {
                         "description": "Tarefa criada"
-                    },
-                    "422": {
-                        "description": "Erro de validação"
                     }
                 },
                 "security": [
@@ -118,22 +106,18 @@
                 "tags": [
                     "Tarefas"
                 ],
-                "summary": "Exibir tarefa",
+                "summary": "Detalhes da tarefa",
                 "operationId": "90b3cd4d2d4b416dc989d2055dbed06c",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Tarefa encontrada"
-                    },
-                    "403": {
-                        "description": "Acesso negado"
+                        "description": "Detalhes da tarefa"
                     }
                 },
                 "security": [
@@ -152,7 +136,6 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
@@ -185,9 +168,6 @@
                 "responses": {
                     "200": {
                         "description": "Tarefa atualizada"
-                    },
-                    "403": {
-                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -206,16 +186,95 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da tarefa",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Tarefa excluída"
-                    },
-                    "403": {
-                        "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/{id}/request-completion": {
+            "post": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "summary": "Solicitar conclusão de tarefa",
+                "operationId": "52f0bfd86ff1b81060b6b176116becfb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "completion_comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Solicitação enviada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tasks/{id}/review-completion": {
+            "post": {
+                "tags": [
+                    "Tarefas"
+                ],
+                "summary": "Revisar solicitação de conclusão",
+                "operationId": "d73d9b4da0caceb173030af54bd91abb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string"
+                                    },
+                                    "admin_comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Conclusão revisada"
                     }
                 },
                 "security": [
