@@ -188,7 +188,16 @@ function Tasks() {
             <h2>Gerenciador de Tarefas</h2>
             <button onClick={handleAddTask}>Nova Tarefa</button>
 
-            {/* Filtros */}
+            {/* BOTÃO DO RELATÓRIO SOMENTE PARA ADMIN */}
+            {userRole === "admin" && (
+                <button
+                    className="botao-relatorio"
+                    onClick={() => navigate("/relatorio")}
+                >
+                    📊 Acessar Relatório por Gráfico
+                </button>
+            )}
+
             <div className="filters">
                 {userRole === "admin" && (
                     <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
@@ -207,7 +216,6 @@ function Tasks() {
                 <button onClick={fetchTasks}>Filtrar</button>
             </div>
 
-            {/* Lista de tarefas */}
             {tasks.length === 0 ? <p>Nenhuma tarefa</p> : (
                 tasks.map(task => (
                     <div className="task-item" key={task.id}>
@@ -218,75 +226,28 @@ function Tasks() {
                         <p>Status: {task.status}</p>
                         {task.user && <p>Usuário: {task.user.name}</p>}
                         {task.completion_request && <p className="highlight">⚠️ Solicitação de conclusão pendente</p>}
-                        {task.completion_comment && <p><strong>Comentário:</strong> {task.completion_comment}</p>}
+                        {typeof task.completion_comment === "string" && task.completion_comment.trim() !== "" && (
+                            <p><strong>Comentário:</strong> {task.completion_comment}</p>
+                        )}
 
                         <div className="task-buttons">
-                            {(userRole === "admin" || parseInt(userId) === task.user_id) && (
+                            {(userRole === "admin" || parseInt(userId) === task.user_id) ? (
                                 <>
                                     <button onClick={() => handleEdit(task)}>Editar</button>
                                     <button onClick={() => handleDelete(task.id)}>Excluir</button>
                                 </>
-                            )}
-                            {userRole !== "admin" && parseInt(userId) === task.user_id && !task.completion_request && (
+                            ) : null}
+
+                            {userRole !== "admin" && parseInt(userId) === task.user_id && !task.completion_request ? (
                                 <button onClick={() => openCompletionModal(task.id)}>Solicitar Conclusão</button>
-                            )}
-                            {userRole === "admin" && task.completion_request && (
+                            ) : null}
+
+                            {userRole === "admin" && task.completion_request ? (
                                 <button onClick={() => openApproveRejectModal(task)}>Analisar Solicitação</button>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 ))
-            )}
-
-            {/* Modal: Criar/Editar tarefa */}
-            {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal">
-                        <h2>{showModal === "add" ? "Nova Tarefa" : "Editar Tarefa"}</h2>
-                        <input type="text" placeholder="Título" value={taskData.title} onChange={(e) => setTaskData({ ...taskData, title: e.target.value })} />
-                        <textarea placeholder="Descrição" value={taskData.description} onChange={(e) => setTaskData({ ...taskData, description: e.target.value })} />
-                        <select value={taskData.priority} onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}>
-                            <option value="low">Baixa</option>
-                            <option value="medium">Média</option>
-                            <option value="high">Alta</option>
-                        </select>
-                        <input type="date" value={taskData.due_date} onChange={(e) => setTaskData({ ...taskData, due_date: e.target.value })} />
-                        {userRole === "admin" && (
-                            <select value={taskData.user_id} onChange={(e) => setTaskData({ ...taskData, user_id: e.target.value })}>
-                                <option value="">Selecione um usuário</option>
-                                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                            </select>
-                        )}
-                        <button onClick={handleSaveTask}>Salvar</button>
-                        <button onClick={() => setShowModal(null)}>Cancelar</button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal: Solicitação de conclusão */}
-            {commentModal === "requestCompletion" && (
-                <div className="modal-overlay">
-                    <div className="modal">
-                        <h3>Solicitar Conclusão</h3>
-                        <textarea value={completionComment} onChange={(e) => setCompletionComment(e.target.value)} placeholder="Descreva o que foi feito..." />
-                        <button onClick={() => handleRequestCompletion(completionTaskId, completionComment)}>Enviar</button>
-                        <button onClick={() => setCommentModal(null)}>Cancelar</button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal: Aprovar ou recusar */}
-            {approveRejectModalOpen && selectedTaskForReview && (
-                <div className="modal-overlay">
-                    <div className="modal">
-                        <h3>Analisar Solicitação</h3>
-                        <p><strong>{selectedTaskForReview.title}</strong></p>
-                        <p>{selectedTaskForReview.completion_comment}</p>
-                        <button onClick={handleApprove}>Aprovar</button>
-                        <button onClick={handleReject}>Recusar</button>
-                        <button onClick={() => setApproveRejectModalOpen(false)}>Cancelar</button>
-                    </div>
-                </div>
             )}
         </div>
     );

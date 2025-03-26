@@ -39,8 +39,7 @@ Sistema completo para gerenciamento de tarefas com autenticação JWT, permissõ
 - Axios
 - React Router
 - TailwindCSS
-- ShadCN/UI
-- Charts.js ou Recharts
+-Recharts
 
 ## ⚙️ Como rodar o projeto
 

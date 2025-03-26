@@ -128,3 +128,17 @@ textarea {
     padding: 8px;
     font-size: 14px;
 }
+.botao-relatorio {
+    background-color: #38a169; /* Tailwind bg-green-600 */
+    color: white;
+    font-weight: bold;
+    padding: 10px 16px;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.botao-relatorio:hover {
+    background-color: #2f855a; /* Tailwind bg-green-700 */
+}
