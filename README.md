@@ -39,7 +39,13 @@ Sistema completo para gerenciamento de tarefas com autenticação JWT, permissõ
 - Axios
 - React Router
 - TailwindCSS
--Recharts
+- Recharts
+
+## 🔐 Segurança
+
+- **JWT** (Autenticação via JSON Web Token)
+- **CORS** (Cross-Origin Resource Sharing)
+- **Rate Limiting** (Limitação de requisições)
 
 ## ⚙️ Como rodar o projeto
 
@@ -98,4 +104,4 @@ Acesse `/api/documentation` após subir o Laravel para ver a documentação gera
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a MIT License.
+Este projeto está licenciado sob a MIT License.  
