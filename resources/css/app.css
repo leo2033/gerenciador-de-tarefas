@@ -20,6 +20,15 @@ body.login-page {
     text-align: center;
 }
 
+.tasks-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f4f4f4 0%, #e0e7ff 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
 .tasks-container {
     max-width: 1200px;
     margin: 30px auto;
@@ -76,7 +85,6 @@ body.login-page {
 .btn-primary {
     background-color: #007bff;
     color: white;
-    width: 100%;
 }
 
 .btn-primary:hover {
@@ -142,6 +150,24 @@ body.login-page {
 
 .btn-review:hover {
     background-color: #218838;
+}
+
+.btn-back {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-back:hover {
+    background-color: #4b5563;
 }
 
 .error {
@@ -241,28 +267,25 @@ body.login-page {
     flex-direction: column;
 }
 
-.filter-item label {
-    font-size: 0.9rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #555;
-}
-
 .tasks-list {
     display: grid;
-    gap: 15px;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .task-card {
     background: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .task-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
 .task-completed {
@@ -286,24 +309,63 @@ body.login-page {
     border-left: 5px solid #dc3545;
 }
 
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
 .task-title {
     font-size: 1.25rem;
     color: #2c3e50;
-    margin-bottom: 10px;
+    margin: 0;
+}
+
+.task-status {
+    display: flex;
+    align-items: center;
 }
 
 .task-description {
     color: #666;
-    margin-bottom: 10px;
-}
-
-.task-details p {
-    margin: 5px 0;
+    margin-bottom: 15px;
     font-size: 0.95rem;
+    line-height: 1.5;
 }
 
-.task-details strong {
+.task-details {
+    margin-bottom: 15px;
+}
+
+.task-detail-item {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    font-size: 0.95rem;
     color: #333;
+}
+
+.task-detail-item strong {
+    margin-right: 5px;
+    color: #2c3e50;
+}
+
+.task-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: #666;
+}
+
+.overdue-icon {
+    color: #dc3545;
+    margin-left: 8px;
+}
+
+.highlight-icon {
+    color: #856404;
+    margin-right: 8px;
 }
 
 .priority-label {
@@ -347,16 +409,10 @@ body.login-page {
     display: flex;
     gap: 10px;
     margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 .no-tasks {
-    text-align: center;
-    color: #666;
-    font-size: 1.1rem;
-    margin-top: 20px;
-}
-
-.loading {
     text-align: center;
     color: #666;
     font-size: 1.1rem;
@@ -378,6 +434,8 @@ body.login-page {
     margin: 5px 0;
     border-radius: 4px;
     font-weight: bold;
+    display: flex;
+    align-items: center;
 }
 
 textarea {
@@ -451,24 +509,6 @@ textarea {
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
-}
-
-.btn-back {
-    background-color: #6b7280;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-back:hover {
-    background-color: #4b5563;
 }
 
 .icon {
