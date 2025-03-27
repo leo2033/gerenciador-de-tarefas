@@ -29,7 +29,9 @@ class TaskController extends Controller
         $year = date('Y', strtotime($date));
         $response = Http::get("https://brasilapi.com.br/api/feriados/v1/{$year}");
 
-        if ($response->failed()) return false;
+        if ($response->failed()) {
+            return false;
+        }
 
         return collect($response->json())->contains('date', $date);
     }

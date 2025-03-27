@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\HolidayController;
 
+// Rota para feriados
 Route::get('/holidays', [HolidayController::class, 'getHolidays']);
 
 // 🔹 Rotas públicas com limitação de requisições
@@ -32,7 +33,10 @@ Route::middleware(['auth:api', 'throttle:60,1'])->group(function () {
         Route::get('/', [TaskController::class, 'index']);
         Route::post('/', [TaskController::class, 'store']);
         Route::get('/{id}', [TaskController::class, 'show']);
-        Route::put('/{id}', [TaskController::class, 'update']);
+        
+        // Corrigindo a rota de atualização
+        Route::put('/{id}', [TaskController::class, 'update']); // Corrigido para '/tasks/{id}'
+
         Route::delete('/{id}', [TaskController::class, 'destroy']);
     });
 

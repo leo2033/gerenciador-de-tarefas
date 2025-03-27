@@ -12,21 +12,25 @@ use App\Mail\TaskCompletionReviewedMail;
 
 class TaskRepository implements TaskRepositoryInterface
 {
+    // Retorna todas as tarefas
     public function all()
     {
         return Task::all();
     }
 
+    // Retorna uma tarefa com base no ID
     public function find(int $id)
     {
         return Task::findOrFail($id);
     }
 
+    // Cria uma nova tarefa
     public function create(array $data)
     {
         return Task::create($data);
     }
 
+    // Atualiza uma tarefa existente
     public function update(int $id, array $data)
     {
         $task = Task::findOrFail($id);
@@ -34,11 +38,13 @@ class TaskRepository implements TaskRepositoryInterface
         return $task;
     }
 
+    // Exclui uma tarefa
     public function delete(int $id)
     {
         return Task::destroy($id);
     }
 
+    // Filtra tarefas com base em parâmetros da requisição
     public function filterTasks(Request $request)
     {
         $user = Auth::user();
@@ -68,127 +74,137 @@ class TaskRepository implements TaskRepositoryInterface
         return $query->get();
     }
 
+    // Criação de tarefa com o usuário autenticado
     public function createTaskWithAuthUser(Request $request)
-{
-    $authUser = Auth::user();
-    $userId = $authUser->role === 'admin' && $request->filled('user_id')
-        ? $request->user_id
-        : $authUser->id;
+    {
+        $authUser = Auth::user();
+        $userId = $authUser->role === 'admin' && $request->filled('user_id')
+            ? $request->user_id
+            : $authUser->id;
 
-    $task = Task::create([
-        'title' => $request->title,
-        'description' => $request->description,
-        'priority' => $request->priority,
-        'due_date' => $request->due_date,
-        'user_id' => $userId,
-    ]);
+        $task = Task::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'priority' => $request->priority,
+            'due_date' => $request->due_date,
+            'user_id' => $userId,
+        ]);
 
-    $task->load('user');
+        $task->load('user');
 
-    if ($authUser->role === 'admin' && $userId !== $authUser->id) {
-        Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'create', $authUser->name));
+        // Enviar e-mail de notificação, se necessário
+        if ($authUser->role === 'admin' && $userId !== $authUser->id) {
+            Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'create', $authUser->name));
+        }
+
+        return $task;
     }
 
-    return $task;
-}
+    // Encontrar uma tarefa autorizada (com base no usuário logado)
+    public function findAuthorized(int $id)
+    {
+        $task = Task::with('user')->find($id);
 
-public function findAuthorized(int $id)
-{
-    $task = Task::with('user')->find($id);
+        if (!$task) {
+            return null;
+        }
 
-    if (!$task) {
-        return null;
+        $user = Auth::user();
+
+        if ($user->role !== 'admin' && $task->user_id !== $user->id) {
+            return null;
+        }
+
+        return $task;
     }
 
-    $user = Auth::user();
+    // Atualizar uma tarefa com o usuário autenticado
+    public function updateTaskWithAuthUser(int $id, Request $request)
+    {
+        $task = Task::findOrFail($id);
+        $authUser = Auth::user();
 
-    if ($user->role !== 'admin' && $task->user_id !== $user->id) {
-        return null;
+        if ($authUser->role !== 'admin' && $task->user_id !== $authUser->id) {
+            return ['error' => 'Você não tem permissão para editar esta tarefa'];
+        }
+
+        if ($authUser->role === 'admin' && $request->filled('user_id')) {
+            $task->user_id = $request->user_id;
+        }
+
+        $task->update($request->only(['title', 'description', 'priority', 'due_date']));
+        $task->load('user');
+
+        // Enviar e-mail de notificação, se necessário
+        if ($authUser->role === 'admin' && $task->user_id !== $authUser->id) {
+            Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'update', $authUser->name));
+        }
+
+        return ['task' => $task];
     }
 
-    return $task;
-}
+    // Deletar uma tarefa com o usuário autenticado
+    public function deleteTaskWithAuthUser(int $id)
+    {
+        $task = Task::findOrFail($id);
+        $authUser = Auth::user();
 
-public function updateTaskWithAuthUser(int $id, Request $request)
-{
-    $task = Task::findOrFail($id);
-    $authUser = Auth::user();
+        if ($authUser->role !== 'admin' && $task->user_id !== $authUser->id) {
+            return ['error' => 'Você não tem permissão para excluir esta tarefa'];
+        }
 
-    if ($authUser->role !== 'admin' && $task->user_id !== $authUser->id) {
-        return ['error' => 'Você não tem permissão para editar esta tarefa'];
+        $task->load('user');
+        $clone = clone $task; // clona antes de deletar
+
+        $task->delete();
+
+        // Enviar e-mail de notificação, se necessário
+        if ($authUser->role === 'admin' && $clone->user_id !== $authUser->id) {
+            Mail::to($clone->user->email)->send(new AdminTaskActionMail($clone, 'delete', $authUser->name));
+        }
+
+        return ['success' => true];
     }
 
-    if ($authUser->role === 'admin' && $request->filled('user_id')) {
-        $task->user_id = $request->user_id;
+    // Solicitar conclusão de uma tarefa
+    public function requestCompletion(int $id, Request $request)
+    {
+        $task = Task::findOrFail($id);
+        $authUserId = Auth::id();
+
+        if ($task->user_id !== $authUserId) {
+            return ['error' => 'Você não pode solicitar conclusão desta tarefa'];
+        }
+
+        $task->update([
+            'completion_request' => true,
+            'completion_comment' => $request->completion_comment,
+        ]);
+
+        return ['success' => true];
     }
 
-    $task->update($request->only(['title', 'description', 'priority', 'due_date']));
-    $task->load('user');
+    // Revisar a conclusão de uma tarefa
+    public function reviewCompletion(int $id, Request $request)
+    {
+        $task = Task::findOrFail($id);
+        $admin = Auth::user();
 
-    if ($authUser->role === 'admin' && $task->user_id !== $authUser->id) {
-        Mail::to($task->user->email)->send(new AdminTaskActionMail($task, 'update', $authUser->name));
+        if ($admin->role !== 'admin') {
+            return ['error' => 'Apenas administradores podem revisar conclusões.'];
+        }
+
+        $task->update([
+            'status' => $request->status,
+            'completion_request' => false,
+            'admin_comment' => $request->status === 'pendente' ? $request->admin_comment : null,
+        ]);
+
+        $task->load('user');
+
+        // Enviar e-mail de notificação, se necessário
+        Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
+
+        return ['task' => $task];
     }
-
-    return ['task' => $task];
-}
-
-public function deleteTaskWithAuthUser(int $id)
-{
-    $task = Task::findOrFail($id);
-    $authUser = Auth::user();
-
-    if ($authUser->role !== 'admin' && $task->user_id !== $authUser->id) {
-        return ['error' => 'Você não tem permissão para excluir esta tarefa'];
-    }
-
-    $task->load('user');
-    $clone = clone $task; // clona antes de deletar
-
-    $task->delete();
-
-    if ($authUser->role === 'admin' && $clone->user_id !== $authUser->id) {
-        Mail::to($clone->user->email)->send(new AdminTaskActionMail($clone, 'delete', $authUser->name));
-    }
-
-    return ['success' => true];
-}
-
-public function requestCompletion(int $id, Request $request)
-{
-    $task = Task::findOrFail($id);
-    $authUserId = Auth::id();
-
-    if ($task->user_id !== $authUserId) {
-        return ['error' => 'Você não pode solicitar conclusão desta tarefa'];
-    }
-
-    $task->update([
-        'completion_request' => true,
-        'completion_comment' => $request->completion_comment,
-    ]);
-
-    return ['success' => true];
-}
-public function reviewCompletion(int $id, Request $request)
-{
-    $task = Task::findOrFail($id);
-    $admin = Auth::user();
-
-    if ($admin->role !== 'admin') {
-        return ['error' => 'Apenas administradores podem revisar conclusões.'];
-    }
-
-    $task->update([
-        'status' => $request->status,
-        'completion_request' => false,
-        'admin_comment' => $request->status === 'pendente' ? $request->admin_comment : null,
-    ]);
-
-    $task->load('user');
-
-    Mail::to($task->user->email)->send(new TaskCompletionReviewedMail($task, $request->status));
-
-    return ['task' => $task];
-}
-
 }
